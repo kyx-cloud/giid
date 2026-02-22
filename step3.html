@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>模範生 – 系統升級提示</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+/* 與前頁相同尺寸 */
+#viewport{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:1080px;
+  height:1920px;
+  transform:translate(-50%,-50%) scale(var(--scale-factor,1));
+  overflow:hidden;
+  background:#000;
+}
+
+/* 背景 01.png */
+.bg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* 🟢 最終版 type-text（避免上面被覆蓋） */
+#type-text{
+  position:absolute;
+  left:53%;
+  top:47%;
+  transform:translateX(-50%);
+  width:70%;
+  color:#ffffff;
+
+  font-family:-apple-system,"PingFang TC","Noto Sans TC","Helvetica Neue",Arial,sans-serif;
+
+  font-size:30px;
+  letter-spacing:5px;
+  line-height:44px;
+  font-weight:300;
+
+  white-space:pre-line;
+}
+</style>
+</head>
+
+<body>
+<div id="viewport">
+
+  <img class="bg" src="image/01.png">
+
+  <div id="type-text"></div>
+
+</div>
+<script>
+  window.addEventListener("load", () => {
+  
+    /* ======================
+       9:16 SCALE
+    ====================== */
+    function resize(){
+      const s = Math.min(
+        window.innerWidth / 1080,
+        window.innerHeight / 1920
+      );
+      document.documentElement.style.setProperty("--scale-factor", s);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+  
+    /* ======================
+       打字機
+    ====================== */
+    const TEXT = `
+   > 評分程序完成 
+   目前的分數僅是基礎外貌評估 
+   系統可以為你生成 「更精緻、更好看的樣貌」 
+   
+   想看看升級後的自己嗎？ 
+   
+   手勢比讚 👍 — 進入美妝程序 
+   手勢比倒讚 👎 — 結束體驗
+    ...
+    `;
+    const el = document.getElementById("type-text");
+    let i = 0;
+    (function type(){
+      if(i <= TEXT.length){
+        el.textContent = TEXT.slice(0,i++);
+        setTimeout(type, 45);
+      }
+    })();
+  
+    /* ======================
+       MediaPipe Hands（安全啟動）
+    ====================== */
+    if (!window.Hands || !window.Camera) {
+      console.warn("MediaPipe not ready, skip hands");
+      return;
+    }
+  
+    const handsVideo = document.createElement("video");
+    handsVideo.playsInline = true;
+    handsVideo.muted = true;
+    handsVideo.style.display = "none";
+    document.body.appendChild(handsVideo);
+  
+    const hands = new Hands({
+      locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`,
+    });
+  
+    hands.setOptions({
+      maxNumHands:1,
+      modelComplexity:0,
+      minDetectionConfidence:0.7,
+      minTrackingConfidence:0.5,
+    });
+  
+    let upFrames = 0;
+    let downFrames = 0;
+    const HOLD = 2;
+    let locked = false;
+  
+    function isUp(lm){   return lm[4].y < lm[5].y - 0.02; }
+    function isDown(lm){ return lm[4].y > lm[5].y + 0.02; }
+  
+    hands.onResults(res=>{
+      if(locked) return;
+      if(!res.multiHandLandmarks?.length){
+        upFrames = downFrames = 0;
+        return;
+      }
+  
+      const lm = res.multiHandLandmarks[0];
+  
+      if(isUp(lm)){
+        upFrames++;
+        downFrames = 0;
+        if(upFrames >= HOLD){
+          locked = true;
+          location.href = "step4.html";
+        }
+      }else if(isDown(lm)){
+        downFrames++;
+        upFrames = 0;
+        if(downFrames >= HOLD){
+          locked = true;
+          location.href = "index.html";
+        }
+      }else{
+        upFrames = downFrames = 0;
+      }
+    });
+  
+    navigator.mediaDevices.getUserMedia({video:true})
+    .then(stream=>{
+      handsVideo.srcObject = stream;
+  
+      const cam = new Camera(handsVideo,{
+        onFrame:async()=>{
+          if(handsVideo.videoWidth){
+            await hands.send({image:handsVideo});
+          }
+        },
+        width:1080,
+        height:1920
+      });
+      cam.start();
+    })
+    .catch(err=>{
+      console.warn("Camera blocked / failed", err);
+    });
+  
+  });
+  </script>
+  
+</body>
+</html>

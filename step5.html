@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>模範生 – 系統升級提示</title>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+/* 與前頁相同尺寸 */
+#viewport{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:1080px;
+  height:1920px;
+  transform:translate(-50%,-50%) scale(var(--scale-factor,1));
+  overflow:hidden;
+  background:#000;
+}
+
+/* 背景 01.png */
+.bg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+#final-shot{
+  position:absolute;
+  top:33%;
+  left:50%;
+  height: 25%;
+  transform:translate(-50%,-50%);
+  width:500px;          /* 可依你視覺再調 */
+  aspect-ratio:9/16;
+  object-fit:cover;
+  z-index:5;
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
+
+/* 🟢 最終版 type-text（避免上面被覆蓋） */
+#type-text{
+  position:absolute;
+  left:53%;
+  top:47%;
+  transform:translateX(-50%);
+  width:70%;
+  color:#ffffff;
+
+  font-family:-apple-system,"PingFang TC","Noto Sans TC","Helvetica Neue",Arial,sans-serif;
+
+  font-size:30px;
+  letter-spacing:5px;
+  line-height:44px;
+  font-weight:300;
+
+  white-space:pre-line;
+}
+/* ======================
+   SYSTEM GLITCH（死機）
+====================== */
+#viewport.glitch{
+  animation: glitchShake 0.12s infinite;
+}
+
+#viewport.glitch::before,
+#viewport.glitch::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:inherit;
+  pointer-events:none;
+  mix-blend-mode:screen;
+}
+
+#viewport.glitch::before{
+  animation: glitchRGB1 0.15s infinite;
+  filter: hue-rotate(20deg);
+  opacity:0.4;
+}
+
+#viewport.glitch::after{
+  animation: glitchRGB2 0.18s infinite;
+  filter: hue-rotate(-20deg);
+  opacity:0.4;
+}
+
+@keyframes glitchShake{
+  0%{ transform:translate(-50%,-50%) scale(var(--scale-factor,1)); }
+  25%{ transform:translate(-49%,-50%) scale(var(--scale-factor,1)); }
+  50%{ transform:translate(-50%,-49%) scale(var(--scale-factor,1)); }
+  75%{ transform:translate(-51%,-50%) scale(var(--scale-factor,1)); }
+}
+
+@keyframes glitchRGB1{
+  0%{ clip-path:inset(0 0 80% 0); }
+  50%{ clip-path:inset(40% 0 20% 0); }
+}
+
+@keyframes glitchRGB2{
+  0%{ clip-path:inset(20% 0 40% 0); }
+  50%{ clip-path:inset(60% 0 10% 0); }
+}
+
+/* ======================
+   SYSTEM POWER OFF（關機）
+====================== */
+#viewport.shutdown{
+  animation: powerOff 1.2s ease-in forwards;
+}
+
+@keyframes powerOff{
+  0%{
+    filter:brightness(1);
+    transform:translate(-50%,-50%) scale(var(--scale-factor,1));
+  }
+  70%{
+    filter:brightness(2);
+    transform:translate(-50%,-50%) scale(var(--scale-factor,0.02));
+  }
+  100%{
+    filter:brightness(0);
+    transform:translate(-50%,-50%) scale(0);
+  }
+  
+}
+
+
+</style>
+</head>
+
+<body>
+<div id="viewport">
+
+  <img class="bg" src="image/10.png">
+  <img id="final-shot" />
+
+  <div id="type-text"></div>
+</div>
+<script>
+  /* ======================
+     9:16 SCALE
+  ====================== */
+  function resize(){
+    const s = Math.min(
+      window.innerWidth / 1080,
+      window.innerHeight / 1920
+    );
+    document.documentElement.style.setProperty("--scale-factor", s);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  
+  
+  /* ======================
+     DOM
+  ====================== */
+  const viewport = document.getElementById("viewport");
+  const endingVideo = document.getElementById("ending-video");
+  
+  
+  /* ======================
+     打字機
+  ====================== */
+  const TEXT = `
+  > 快看看現在的你
+  真是太漂亮了！！！
+  
+  不過我覺得這不是你的極限
+  還能更好看！更好看！
+  
+  ％＊＄＃＠故障％＊＄＃＠
+  ％＊＄＃＠％＊＄＃＠系統已故障％＊＄＃＠
+  
+  >model 1 進入抽象審美區
+  >model 1 離模範美只差一步了
+  `;
+  
+  const el = document.getElementById("type-text");
+  let i = 0;
+  (function type(){
+    if(i <= TEXT.length){
+      el.textContent = TEXT.slice(0,i++);
+      setTimeout(type, 45);
+    }
+  })();
+  
+  
+  /* ======================
+     BGM（本頁播放）
+  ====================== */
+  const bgm = new Audio("music2.mp3");
+  bgm.loop = false;
+  bgm.volume = 0.6;
+  
+  window.addEventListener("load", () => {
+    bgm.play().catch(err=>{
+      console.log("BGM failed:", err);
+    });
+  });
+  
+  // 記錄時間給下一頁
+  setInterval(() => {
+    if (!bgm.paused) {
+      localStorage.setItem("bgmTime", bgm.currentTime);
+    }
+  }, 500);
+  
+  
+  /* ======================
+     上一頁拍攝畫面
+  ====================== */
+  const shot = localStorage.getItem("makeup_shot") || localStorage.getItem("finalShot");
+  if (shot) {
+    document.getElementById("final-shot").src = shot;
+  }
+  
+  
+  /* ======================
+     系統死機 / 關機時間軸
+  ====================== */
+  // 20 秒：開始 glitch
+  setTimeout(() => {
+    viewport.classList.add("glitch");
+  }, 20000);
+  
+  // 27 秒：關機
+  setTimeout(() => {
+    viewport.classList.remove("glitch");
+    viewport.classList.add("shutdown");
+  }, 27000);
+  
+  
+  /* ======================
+     30 秒：停音樂 → 播動畫
+  ====================== */
+  setTimeout(() => {
+  bgm.pause();
+  location.href = "text.html";
+}, 30000);
+
+  </script>
+  
+
+</body>
+</html>

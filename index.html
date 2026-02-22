@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR 互動體驗</title>
+
+  <!-- A-Frame / MindAR / MediaPipe -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
+
+  <!-- MediaPipe（臉 + 手） -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+          <!-- 只放 UI -->
+  <div id="ar-viewport">
+    <!-- ===============================
+         INTRO 1（待機動畫）
+    =============================== -->
+    <div id="intro-container" class="full-screen-overlay">
+      <video
+        id="intro-video"
+        src="Animation1.mp4"
+        autoplay
+        muted
+        playsinline
+        class="media-content">
+      </video>
+    </div>
+    <audio id="scan-music" src="music1.mp3" preload="auto" loop></audio>
+
+    <!-- ===============================
+         AR Scene（MindAR）
+    =============================== -->
+    <a-scene
+      id="ar-scene"
+      mindar-face="uiLoading:no; uiScanning:no; disableFaceMesh:true;"
+      vr-mode-ui="enabled:false"
+      renderer="colorManagement:true">
+      <a-camera active="false"></a-camera>
+    </a-scene>
+<!-- ===============================
+     01 文字敘事畫面（打字機）
+=============================== -->
+<div id="tv-blackout"></div>
+<div id="typewriter-screen" class="full-screen-overlay">
+  <img src="image/01.png" class="media-content">
+  <div id="typewriter-text"></div>
+  <div id="loading-box" style="display:none;">
+    <div id="loading-text">系統正在載入模型標準</div>
+    <div id="progress-track">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="progress-text">0%</div>
+  </div>
+  
+</div>
+
+<!-- ===============================
+     01-2 評分生成前（第二段敘事頁）
+=============================== -->
+<div id="typewriter2-screen" class="full-screen-overlay" style="display:none;">
+  <img src="image/01.png" class="media-content" alt="pre rating bg">
+  <div id="typewriter2-text"></div>
+  <div id="loading2-box" style="display:none;">
+    <div id="loading2-text">評分表生成中...</div>
+    <div id="progress2-track">
+      <div id="progress2-bar"></div>
+    </div>
+    <div id="progress2-text">0%</div>
+  </div>
+  
+</div>
+<audio id="fax-sound" src="sound/fax.mp3" preload="auto"></audio>
+
+    <!-- ===============================
+         02 對準框（主攝影畫面框）
+    =============================== -->
+    <div id="camera-fade"></div>
+
+    <div id="camera-overlay">
+      <img src="image/02.png" alt="camera frame">
+      <!-- ✅ 倒數數字會由 JS 動態加在這裡（mk-countdown） -->
+    </div>
+
+    <!-- ===============================
+         03 掃描畫面（背景 + 倒數 + 掃描線）
+    =============================== -->
+    <div id="scan-overlay">
+      <!-- 背景沿用 02 畫面 -->
+      <img id="scan-bg" src="image/02.png" alt="scan background">
+
+      <!-- 5,4,3,2,1 倒數 -->
+      <div id="scan-countdown"></div>
+
+      <!-- 掃描光線：水平 & 垂直（用 CSS animation 控制） -->
+      <img id="scan-light-h" src="image/light1.png" alt="scan light horizontal">
+      <img id="scan-light-v" src="image/light2.png" alt="scan light vertical">
+    </div>
+
+    
+
+    <!-- ===============================
+         05 評分表
+    =============================== -->
+    <div id="rating-overlay">
+      <img src="image/05.png" alt="rating">
+    </div>
+
+    <!-- ===============================
+         06 Popup 1（兩個選項：OFF / NEXT）
+    =============================== -->
+    <div id="low-score-overlay" class="overlay">
+      <img src="image/Windows1.png" alt="low score popup">
+
+      <!-- 隱形按鈕區塊，位置靠 CSS 對齊圖上的 OFF / NEXT -->
+      <button id="btn-off"  class="choice-btn choice-off"></button>
+      <button id="btn-next" class="choice-btn choice-next"></button>
+    </div>
+
+  
+        
+
+          <!-- ===== 文字濾鏡 ===== -->
+          <img id="filter-bg" class="filter-bg" alt="text filter bg">
+          <video id="filter-video" autoplay muted playsinline></video>
+          <img id="faceOverlay" class="face-overlay" alt="face overlay">
+          <img src="image/frame2.png" class="frame-overlay frame-text" alt="text frame">
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+         07 拍照完成（打卡頁）
+    =============================== -->
+    <div id="photo-finish-overlay">
+      <!-- 這張是實際拍下來的畫面（由 JS 塗上） -->
+      <img id="ui-photo-finish" class="photo-finish-bg" alt="photo result">
+      <!-- 上方 UI 框 -->
+      <img src="image/07.png" class="photo-finish-frame" alt="photo frame">
+    </div>
+
+    <!-- ===============================
+         07-2 OFF 版本的結束體驗頁
+    =============================== -->
+    <div id="photo-off-overlay">
+      <img src="image/07-2.png" alt="photo off">
+      <button id="btn-end-off">結束體驗</button>
+    </div>
+
+    <!-- ===============================
+         Popup 2（美妝拍完後的視窗）
+    =============================== -->
+    <div id="popup2-overlay" class="overlay">
+      <img src="image/Windows2.png" alt="popup 2">
+      <button id="btn-popup2-off"  class="choice-btn"></button>
+      <button id="btn-popup2-next" class="choice-btn"></button>
+    </div>
+
+    <!-- ===============================
+         INTRO 2（動畫二）
+    =============================== -->
+    <div id="intro2-container" class="full-screen-overlay">
+      <video
+        id="intro2-video"
+        src="Animation2.mp4"
+        playsinline
+        muted
+        class="media-content">
+      </video>
+    </div>
+
+    <!-- ===============================
+         Popup 3（文字濾鏡後的視窗）
+    =============================== -->
+    <div id="popup3-overlay" class="overlay">
+      <img src="image/Windows3.png" alt="popup 3">
+      <button id="btn-popup3-off"  class="choice-btn"></button>
+      <button id="btn-popup3-next" class="choice-btn"></button>
+    </div>
+
+    <!-- ===============================
+         IG 發文頁
+    =============================== -->
+    <div id="post-overlay">
+      <!-- IG 背景（文字-08） -->
+      <img id="post-bg" class="ig-page-bg" src="image/text2.png" alt="post background">
+
+      <div class="post-black-bg"></div>
+
+      <div class="ig-phone">
+        <!-- 上方列 -->
+        <div class="top-bar">
+          模範生 &gt; <span>POST</span>
+        </div>
+
+        <!-- STORY 區（我先只保留結束體驗按鈕，避免干擾） -->
+        <div class="stories">
+          <button id="btn-end-post-ig" class="btn-main btn-end-ig">
+            結束體驗
+          </button>
+        </div>
+
+        <!-- 貼文內容 -->
+        <div class="post">
+          <div class="post-header">
+            <img src="image/bth.png" alt="avatar">
+            <div class="info">
+              <strong>MODEL1</strong><br>
+              <small>2026/08/07</small>
+            </div>
+          </div>
+
+          <div class="post-img-wrap">
+            <!-- 拍照結果 -->
+            <img id="postImage" class="post-img" alt="post image">
+            <!-- 分數 glitch -->
+            <div id="glitchScore" class="glitch-score">最終分數：21分</div>
+          </div>
+
+          <div class="actions">
+            <span id="likeBtn">♡</span>
+            <span>💬</span>
+          </div>
+
+          <div id="likesCount" class="likes-count">0 likes</div>
+          <div id="commentsList" class="comments"></div>
+
+          <div class="comment-box">
+            <input id="commentInput" type="text" placeholder="留言……">
+          </div>
+        </div>
+      </div>
+
+      <!-- 外層結束體驗（CSS 會隱藏） -->
+      <button id="btn-end-post">結束體驗</button>
+    </div>
+  </div>
+
+  <!-- ===============================
+       JS
+  =============================== -->
+  <script src="script.js"></script>
+
+
+</body>
+</html>

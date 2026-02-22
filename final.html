@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>列印選擇 - 9:16 直式</title>
+    <style>
+        /* 嚴格保留原始文字數值 */
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        h1 { font-weight: 300; letter-spacing: 2px; font-size: 24px; margin-bottom: 0px; }
+        p { font-weight: 300; font-size: 12px; letter-spacing: 2px; margin-bottom: 0px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 40px auto;
+        }
+
+        .ig-page-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            object-fit: cover;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* 📸 照片容器：流動數據線效果 */
+        .item {
+            background: #111;
+            padding: 15px;
+            border: 1px solid #333; /* 基礎深色邊框 */
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.9;
+            aspect-ratio: 9 / 18;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 隱藏的跑馬燈光束 */
+        .item::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            /* 這裡控制線條長度：20deg 代表光束長度，其餘透明 */
+            background: conic-gradient(
+                from 0deg, 
+                transparent 0deg, 
+                transparent 300deg, 
+                #fff 360deg
+            );
+            z-index: 1;
+            animation: flowLine 2s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* 當 Hover 或選中時才顯現光束 */
+        .item:hover::before, .item.selected::before {
+            opacity: 1;
+        }
+
+        /* 內部黑色遮罩：確保線條只出現在 1px 的邊緣 */
+        .item::after {
+            content: "";
+            position: absolute;
+            inset: 1px; /* 線條寬度為 1px */
+            background: #111;
+            z-index: 2;
+            border-radius: inherit;
+        }
+
+        @keyframes flowLine {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 質感 Hover 效果 */
+        .item:hover {
+            transform: scale(1.02);
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .item.selected { border-color: #555; background: #1a1a1a; }
+
+        /* 內容圖片與相框 */
+        .photo {
+            width: calc(100% - 30px);
+            height: calc(100% - 60px);
+            object-fit: cover;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 3; /* 高於遮罩 */
+            transition: 0.5s;
+        }
+     
+       
+        .frame-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: calc(100% - 30px);
+            height: calc(100% - 60px);
+            background-image: url('image/03.png');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 4;
+        }
+      
+        .checkbox {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #fff;
+            z-index: 6;
+        }
+        .item.selected .checkbox { background: #fff; }
+        .checkbox::after { content: "✓"; color: #000; font-weight: bold; line-height: 20px; display: none; }
+        .item.selected .checkbox::after { display: block; }
+
+        .item-label {
+            position: absolute;
+            bottom: 0;
+            width: 90%;
+            padding: 15px 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            font-size: 14px;
+            font-weight: 200;
+            z-index: 5;
+            letter-spacing: 3px;
+        }
+
+        /* 🚀 帥氣發光按鈕 */
+        .btn-group { margin-top: 50px; }
+        button {
+            border-radius: 0px;
+            cursor: pointer; border: none; margin: 0 50px; transition: 0.3s;
+        }
+        
+        #printBtn { 
+            background: #fff; color: #000;
+            font-size: 16px; font-weight: 400; padding: 10px 25px; letter-spacing: 2px;
+            box-shadow: 0 0 0px #fff;
+            position: relative;
+        }
+        #printBtn:hover {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+            background: #f0f0f0;
+        }
+
+        #endBtn { 
+            background: #333; color: #fff; border: 0.5px solid #555;
+            font-size: 16px; font-weight: 400; padding: 10px 25px; letter-spacing: 2px;
+        }
+        #endBtn:hover { border-color: #fff; background: #444; }
+
+        /* 🖨️ 列印控制 */
+        @media print {
+            body { background: white; color: black; padding: 0; }
+            .no-print { display: none !important; }
+            .grid { display: block; margin: 0; }
+            .item { border: none; padding: 0; margin-bottom: 20px; page-break-after: always; width: 100%; aspect-ratio: 9 / 16; -webkit-print-color-adjust: exact; }
+            .item::before, .item::after { display: none; }
+            .checkbox, .item-label { display: none; }
+            .photo, .frame-overlay { width: 100%; height: 100%; top: 0; left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <img id="post-bg" class="ig-page-bg" src="image/final-bg.png" alt="post background">
+    <h1>MODEL1_請選擇想要列印的照片</h1>
+    <p><可多選或單選></p>
+</div>
+
+<div class="grid">
+    <div class="item" onclick="toggle(this)">
+        <img id="img-score" class="photo" src="image/05.png">
+        <div class="frame-overlay"></div>
+        <div class="checkbox"></div>
+        <div class="item-label">01＿評分結果表</div>
+    </div>
+
+    <div class="item" onclick="toggle(this)">
+        <img id="img-makeup" class="photo" src="image/placeholder.png">
+        <div class="frame-overlay"></div>
+        <div class="checkbox"></div>
+        <div class="item-label">02＿美妝濾鏡</div>
+    </div>
+
+    <div class="item" onclick="toggle(this)">
+        <img id="img-text" class="photo" src="image/placeholder.png">
+        <div class="frame-overlay"></div>
+        <div class="checkbox"></div>
+        <div class="item-label">03＿文字濾鏡</div>
+    </div>
+
+    <div class="item" onclick="toggle(this)">
+        <img id="img-post" class="photo" src="image/placeholder.png">
+        <div class="frame-overlay"></div>
+        <div class="checkbox"></div>
+        <div class="item-label">04_社群貼文介面</div>
+    </div>
+</div>
+
+<div class="btn-group no-print">
+    <button id="printBtn" onclick="doPrint()">確認列印</button>
+    <button id="endBtn" onclick="finish()">結束體驗</button>
+</div>
+
+<script>
+    window.onload = () => {
+        const makeup = localStorage.getItem("makeup_shot");
+        const text = localStorage.getItem("text_shot");
+        const post = localStorage.getItem("post_shot");
+        const score = localStorage.getItem("score_shot"); 
+
+        if(makeup) document.getElementById('img-makeup').src = makeup;
+        if(text) document.getElementById('img-text').src = text;
+        if(post) document.getElementById('img-post').src = post;
+        if(score) document.getElementById('img-score').src = score;
+    };
+
+    function toggle(el) {
+        el.classList.toggle('selected');
+    }
+
+    function doPrint() {
+        const selected = document.querySelectorAll('.item.selected');
+        if (selected.length === 0) {
+            alert("請先選擇至少一張照片");
+            return;
+        }
+
+        document.querySelectorAll('.item').forEach(item => {
+            if (!item.classList.contains('selected')) {
+                item.style.display = 'none';
+            }
+        });
+
+        window.print();
+
+        setTimeout(() => {
+            document.querySelectorAll('.item').forEach(item => item.style.display = 'flex');
+        }, 1000);
+    }
+
+    function finish() {
+        localStorage.clear();
+        window.location.href = "index.html";
+    }
+</script>
+
+</body>
+</html>

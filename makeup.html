@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Good Model – Makeup Final</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  background:#000;
+  width:100%;
+  height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+/* 🔹 與前面頁面一致比例 */
+#viewport{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:1080px;
+  height:1920px;
+  transform:translate(-50%,-50%) scale(var(--scale-factor,1));
+}
+
+/* 🔹 第二攝影機（視訊通話感） */
+#video2{
+  position:absolute;
+ 
+  
+  width:360px;
+  height:490px;
+  object-fit:cover;
+  
+
+  z-index:30;
+  background:#000;
+  transform: scaleX(-1); /* ✅ 第二鏡頭鏡像 */
+}
+
+/* 9:16 scale */
+:root{ --scale-factor:1; }
+
+.stage{
+  position:relative;
+  width:100%;
+  height:100%;
+}
+
+video,canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* 相框 */
+.frame-overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  pointer-events:none;
+  z-index:10;
+}
+
+/* 底部濾鏡圈圈 */
+.nav{
+  position:absolute;
+  bottom:300px;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  gap:60px;
+  z-index:20;
+}
+
+.nav img{
+  width:130px;
+  height:130px;
+  object-fit:cover;
+  border-radius:50%;
+  border:2px solid #fff;
+}
+#countdown{
+  position: absolute;
+  top: 170px;              /* 放在方框上方 */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 100px;
+  font-weight: 300;
+  color: #ffffff;
+  letter-spacing: 6px;
+  text-shadow: 0 0 6px rgba(0,0,0,.7);
+  z-index: 60;             /* 🔥 一定要高於 scan-bg 與光線 */
+  pointer-events: none;
+
+  font-family: -apple-system, "PingFang TC", "PingFangTC-Regular",
+               "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="viewport">
+<div class="stage">
+
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <!-- 🔹 第二攝影機（無偵測） -->
+  <video id="video2" autoplay muted playsinline></video>
+
+  <img src="image/08.png" class="frame-overlay">
+  <div id="countdown">60</div>
+
+  <!-- 🔹 五個濾鏡圈圈 -->
+  <div class="nav">
+    <div onclick="changeStyle(1)"><img></div>
+    <div onclick="changeStyle(2)"><img></div>
+    <div onclick="changeStyle(3)"><img></div>
+    <div onclick="changeStyle(4)"><img></div>
+    <div onclick="changeStyle(5)"><img></div>
+  </div>
+
+</div>
+</div>
+<script>
+
+  /* 🔹 與前頁相同螢幕比例 */
+  function resize(){
+    const s = Math.min(
+      window.innerWidth / 1080,
+      window.innerHeight / 1920
+    );
+    document.documentElement.style.setProperty("--scale-factor", s);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  
+  
+
+  /* -------------------------------
+     濾鏡圖片 + 圈圈 UI
+  -------------------------------- */
+  const navImgs = document.querySelectorAll(".nav img");
+  
+  function updateNavUI(active){
+    navImgs.forEach((img,i)=>{
+      img.src = (i+1===active)
+        ? "image/bth2.png"
+        : "image/bth.png";
+    });
+  }
+  
+  
+  /* -------------------------------
+     讀取濾鏡素材（預載所有 style）
+  -------------------------------- */
+  let currentStyleIndex = 1;
+  
+  const makeupSets = {
+    1:{face:"makeup/foundation.png",lip:"makeup/lip.png",brow:"makeup/brow.png",eye:"makeup/eye.png",blush:"makeup/blush.png",contact:"makeup/contacts.png"},
+    2:{face:"makeup2/foundation.png",lip:"makeup2/lip.png",brow:"makeup2/brow.png",eye:"makeup2/eye.png",blush:"makeup2/blush.png",contact:"makeup2/contacts.png"},
+    3:{face:"makeup3/foundation.png",lip:"makeup3/lip.png",brow:"makeup3/brow.png",eye:"makeup3/eye.png",blush:"makeup3/blush.png",contact:"makeup3/contacts.png"},
+    4:{face:"makeup4/foundation.png",lip:"makeup4/lip.png",brow:"makeup4/brow.png",eye:"makeup4/eye.png",blush:"makeup4/blush.png",contact:"makeup4/contacts.png"},
+    5:{face:"makeup5/foundation.png",lip:"makeup5/lip.png",brow:"makeup5/brow.png",eye:"makeup5/eye.png",blush:"makeup5/blush.png",contact:"makeup5/contacts.png"},
+  };
+  
+  /* ⭐ cache：每個 style 各自一組 Image，載好之後就不再重新載 */
+  const makeupCache = {};   // { 1:{face:Image, lip:Image, ... , nose:Image, loaded:true}, ... }
+  
+  function preloadMakeup(){
+    const keys = ["face","lip","brow","eye","blush","contact"];
+  
+    for(let i=1;i<=5;i++){
+      const set = makeupSets[i];
+      const cacheSet = {};
+      let loadedCount = 0;
+      const need = keys.length + 1; // +1 是 nose
+  
+      keys.forEach(k=>{
+        const img = new Image();
+        img.onload = ()=>{
+          loadedCount++;
+          if(loadedCount === need) cacheSet.loaded = true;
+        };
+        img.src = set[k];
+        cacheSet[k] = img;
+      });
+  
+      // nose 共用一張
+      const nose = new Image();
+      nose.onload = ()=>{
+        loadedCount++;
+        if(loadedCount === need) cacheSet.loaded = true;
+      };
+      nose.src = "makeup/nose.png";
+      cacheSet.nose = nose;
+      cacheSet.loaded = false;
+  
+      makeupCache[i] = cacheSet;
+    }
+  }
+  
+  preloadMakeup();
+  
+  /* 🔁 切換 style：只換 index + 圈圈 UI，不再重新設定 src */
+  function changeStyle(n){
+    if(n < 1) n = 5;
+    if(n > 5) n = 1;
+    currentStyleIndex = n;
+    updateNavUI(n);
+  }
+  /* ======================
+   Enter 鍵切換濾鏡
+====================== */
+window.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    changeStyle(currentStyleIndex + 1);
+  }
+});
+
+  /* 預設載入濾鏡1（圈圈亮第一顆） */
+  changeStyle(1);
+  
+  
+  /* -------------------------------
+     攝影機
+  -------------------------------- */
+  const video  = document.getElementById("video");
+  navigator.mediaDevices.getUserMedia({video:true})
+  .then(s=> video.srcObject=s);
+  
+  
+  /* -------------------------------
+     FaceMesh
+  -------------------------------- */
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  
+  const faceMesh = new FaceMesh({
+    locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
+  });
+  
+  faceMesh.setOptions({
+    maxNumFaces:1,
+    refineLandmarks:true,
+    minDetectionConfidence:0.6,
+    minTrackingConfidence:0.6
+  });
+  
+  
+  
+  
+  /* -------------------------------
+     Camera pipeline
+  -------------------------------- */
+  const cam = new Camera(video,{
+    onFrame: async ()=>{
+      if(!video.videoWidth) return;
+      await faceMesh.send({image:video});
+    
+    },
+    width:1080,
+    height:1920
+  });
+  cam.start();
+  
+  
+  /* -------------------------------
+     妝容繪製（單一 onResults）
+  -------------------------------- */
+  const rawBuffer = document.createElement("canvas");
+  const rawCtx    = rawBuffer.getContext("2d");
+  
+  let fx=0, fy=0, fw=0;
+  let lx=0, ly=0, lw=0;
+  let initialized=false;
+  
+  const LIP_Y_OFFSET     = -0.200;
+  const FOUNDATION_SCALE = 4.5;
+  
+  faceMesh.onResults(res => {
+  
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if(!w || !h) return;
+  
+    canvas.width  = w;
+    canvas.height = h;
+    rawBuffer.width  = w;
+    rawBuffer.height = h;
+  
+    // ⭐ 鏡像（你原本設定）
+    rawCtx.save();
+    rawCtx.translate(w,0);
+    rawCtx.scale(-1,1);
+    rawCtx.drawImage(video,0,0,w,h);
+    rawCtx.restore();
+  
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(rawBuffer,0,0,w,h);
+  
+    if(!res.multiFaceLandmarks?.length) return;
+    const lm = res.multiFaceLandmarks[0];
+  
+    // 取出目前 style 的圖
+    const set = makeupCache[currentStyleIndex] || makeupCache[1];
+    if(!set || !set.loaded) return;
+  
+    const faceImg    = set.face;
+    const lipImg     = set.lip;
+    const blushImg   = set.blush;
+    const browImg    = set.brow;
+    const eyeImg     = set.eye;
+    const contactImg = set.contact;
+    const noseImg    = set.nose;
+  
+    /* ===== 以下全部保留你的妝容計算 ===== */
+  
+    // 粉底
+    const L = (1 - lm[234].x) * w;
+    const R = (1 - lm[454].x) * w;
+    const T = lm[10].y * h;
+    const B = lm[152].y * h;
+  
+    const cx = (L + R) / 2;
+    const cy = (T + B) / 2;
+    const wFace = Math.abs(R - L) * FOUNDATION_SCALE;
+  
+    if(!initialized){
+      fx = cx; fy = cy; fw = wFace;
+      initialized = true;
+    }else{
+      fx += (cx - fx) * 0.25;
+      fy += (cy - fy) * 0.25;
+      fw += (wFace - fw) * 0.25;
+    }
+  
+    const fh = fw * (faceImg.height / faceImg.width);
+    ctx.drawImage(faceImg, fx-fw/2, fy-fh/2+30, fw, fh);
+  
+    // 嘴唇
+    const lX = (1 - lm[61].x)  * w;
+    const rX = (1 - lm[291].x) * w;
+    const tY = lm[13].y * h;
+    const bY = lm[14].y * h;
+  
+    const cxl = (lX + rX) / 2;
+    const cyl = ((tY + bY) / 2) + (Math.abs(rX-lX) * LIP_Y_OFFSET);
+  
+    const realLW  = Math.abs(rX - lX);
+    const targetW = realLW * 16.1;
+  
+    if(!lw){
+      lx = cxl; ly = cyl; lw = targetW;
+    }else{
+      lx += (cxl - lx) * 0.25;
+      ly += (cyl - ly) * 0.25;
+      lw += (targetW - lw) * 0.25;
+    }
+  
+    const lh = lw * (lipImg.height / lipImg.width);
+    ctx.drawImage(lipImg, lx-lw/2, ly-lh/2, lw, lh);
+  
+    // 腮紅
+    const blushSize = fw * 0.90;
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(blushImg,(1-lm[234].x)*w-blushSize/2-60, lm[250].y*h-blushSize/2+8, blushSize, blushSize);
+    ctx.drawImage(blushImg,(1-lm[454].x)*w-blushSize/2-44, lm[454].y*h-blushSize/2+35, blushSize, blushSize);
+    ctx.globalAlpha = 1;
+  
+    // 眉毛
+    const browW = fw * 1.3;
+    const browH = browW * (browImg.height / browImg.width) * 0.7;
+  
+    ctx.drawImage(browImg,(1-lm[70].x)*w-browW/2-50, lm[70].y*h-browH/2+55, browW,browH);
+  
+    ctx.save();
+    ctx.translate((1-lm[300].x)*w+50, lm[300].y*h+59);
+    ctx.scale(-1,1);
+    ctx.drawImage(browImg,-browW/2,-browH/2,browW,browH);
+    ctx.restore();
+  
+    // 眼妝
+    const eyeW = fw * 0.21;
+    const eyeH = eyeW * (eyeImg.height / eyeImg.width);
+  
+    ctx.drawImage(eyeImg,(1-lm[159].x)*w-eyeW/2+2, lm[159].y*h-eyeH/2+3, eyeW,eyeH);
+  
+    ctx.save();
+    ctx.translate((1-lm[386].x)*w+2, lm[386].y*h+1.5);
+    ctx.scale(-1,1);
+    ctx.drawImage(eyeImg,-eyeW/2.1,-eyeH/2.05, eyeW,eyeH);
+    ctx.restore();
+  
+    // 美瞳
+    const CONTACT_SIZE = fw * 0.05;
+    const cw = CONTACT_SIZE;
+    const ch = cw * (contactImg.height / contactImg.width);
+  
+    ctx.drawImage(contactImg,(1-lm[468].x)*w-cw/2, lm[468].y*h-ch/1.8, cw,ch);
+  
+    ctx.save();
+    ctx.translate((1-lm[473].x)*w, lm[473].y*h);
+    ctx.scale(-1,1);
+    ctx.drawImage(contactImg,-cw/2,-ch/1.9, cw,ch);
+    ctx.restore();
+  
+    // 鼻影
+    const nx = (1-lm[6].x)*w;
+    const ny = lm[6].y*h;
+    const noseH = Math.abs((lm[2].y - lm[168].y) * h);
+    const nw = noseH * 4;
+    const nh = nw * (noseImg.height / noseImg.width);
+  
+    ctx.drawImage(noseImg,nx-nw/2.1,ny-nh/2+6,nw,nh);
+  });
+ /* ======================
+   BGM（接續上一頁）
+====================== */
+const bgm = new Audio("music2.mp3");
+bgm.loop = true;
+bgm.volume = 0.6;
+
+// 讀取上一頁存的時間
+const savedTime = localStorage.getItem("bgmTime");
+if (savedTime) {
+  bgm.currentTime = parseFloat(savedTime);
+}
+
+// kiosk / 展場：頁面載完立刻播
+window.addEventListener("load", () => {
+  bgm.play().catch(err => {
+    console.log("BGM resume failed:", err);
+  });
+});
+
+// 繼續更新時間（給再下一頁用）
+setInterval(() => {
+  if (!bgm.paused) {
+    localStorage.setItem("bgmTime", bgm.currentTime);
+  }
+}, 500);
+
+/* ======================
+   20 秒倒數＋自動跳轉
+====================== */
+let timeLeft = 60;
+const cdEl = document.getElementById("countdown");
+
+cdEl.textContent = timeLeft;
+
+const timer = setInterval(() => {
+  timeLeft--;
+  cdEl.textContent = timeLeft;
+  if (timeLeft <= 0) {
+  clearInterval(timer);
+
+  // ✅ 存下最後一幀（已套妝的 canvas）
+  try {
+    const shot = canvas.toDataURL("image/jpeg", 0.9);
+    localStorage.setItem("makeup_shot", shot);
+  } catch(e){}
+
+  window.location.href = "step5.html";
+}
+
+}, 1000);
+/* ======================
+   第二攝影機（純顯示，不進 FaceMesh）
+   ⚠️ 不碰 video / canvas / faceMesh
+====================== */
+const video2 = document.getElementById("video2");
+
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => {
+    video2.srcObject = stream;
+  })
+  .catch(err => {
+    console.error("第二攝影機失敗", err);
+  });
+
+  </script>
+  
+</body>
+</html>
