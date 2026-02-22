@@ -36,8 +36,8 @@
   .ig-page-bg {
     position: absolute;
     inset: 0;                 /* ✅ 回到原本貼滿畫面的位置 */
-    width: 200%;
-    height: 150%;
+    width: 1080px;
+  height: 1920px;
     left: -40%;
     top: -30%;
   
