@@ -2,26 +2,33 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>列印選擇 - 9:16 直式</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>列印選擇 - 質感流動邊框版</title>
     <style>
         /* 嚴格保留原始文字數值 */
-        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        body { 
+            background: #000; color: #fff; font-family: sans-serif; text-align: center; 
+            margin: 0; padding: 20px; 
+            overflow-x: hidden; /* 防止背景撐開寬度 */
+        }
         h1 { font-weight: 300; letter-spacing: 2px; font-size: 24px; margin-bottom: 0px; }
         p { font-weight: 300; font-size: 12px; letter-spacing: 2px; margin-bottom: 0px; }
 
+        /* 網格佈局優化 */
         .grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
-            max-width: 900px;
+            max-width: 800px; /* 稍微縮小 max-width 確保在筆電螢幕不會太散 */
             margin: 40px auto;
+            padding: 0 10px;
         }
 
+        /* 2. 背景優化：防止干擾截圖座標 */
         .ig-page-bg {
             position: fixed;
             top: 0; left: 0;
-            width: 1080px;
-  height: 1920px;
+            width: 100vw; height: 100vh;
             object-fit: cover;
             z-index: -1;
             pointer-events: none;
@@ -32,26 +39,25 @@
         .item {
             background: #111;
             padding: 15px;
-            border: 1px solid #333; /* 基礎深色邊框 */
+            border: 1px solid #333; 
             cursor: pointer;
             position: relative;
             transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 0.9;
-            aspect-ratio: 9 / 18;
+            aspect-ratio: 9 / 16; /* 修正回標準比例 */
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            /* 修正 GitHub 尺寸感 */
+            width: 100%;
         }
 
-        /* 隱藏的跑馬燈光束 */
+        /* 流動數據線 (Data Line) */
         .item::before {
             content: "";
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            /* 這裡控制線條長度：20deg 代表光束長度，其餘透明 */
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
             background: conic-gradient(
                 from 0deg, 
                 transparent 0deg, 
@@ -59,24 +65,20 @@
                 #fff 360deg
             );
             z-index: 1;
-            animation: flowLine 2s linear infinite;
+            animation: flowLine 2.5s linear infinite;
             opacity: 0;
             transition: opacity 0.3s;
         }
 
-        /* 當 Hover 或選中時才顯現光束 */
-        .item:hover::before, .item.selected::before {
-            opacity: 1;
-        }
+        .item:hover::before, .item.selected::before { opacity: 1; }
 
-        /* 內部黑色遮罩：確保線條只出現在 1px 的邊緣 */
+        /* 內部遮罩：確保線條只在 1px 邊緣 */
         .item::after {
             content: "";
             position: absolute;
-            inset: 1px; /* 線條寬度為 1px */
+            inset: 1px; 
             background: #111;
             z-index: 2;
-            border-radius: inherit;
         }
 
         @keyframes flowLine {
@@ -84,32 +86,28 @@
             to { transform: rotate(360deg); }
         }
 
-        /* 質感 Hover 效果 */
         .item:hover {
             transform: scale(1.02);
             opacity: 1;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
         .item.selected { border-color: #555; background: #1a1a1a; }
 
-        /* 內容圖片與相框 */
+        /* 圖片與相框層級校準 */
         .photo {
             width: calc(100% - 30px);
             height: calc(100% - 60px);
             object-fit: cover;
             position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 3; /* 高於遮罩 */
+            top: 15px; left: 15px;
+            z-index: 3; 
             transition: 0.5s;
         }
-     
        
         .frame-overlay {
             position: absolute;
-            top: 15px;
-            left: 15px;
+            top: 15px; left: 15px;
             width: calc(100% - 30px);
             height: calc(100% - 60px);
             background-image: url('image/03.png');
@@ -121,10 +119,8 @@
       
         .checkbox {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 20px;
-            height: 20px;
+            top: 20px; right: 20px;
+            width: 20px; height: 20px;
             border: 1px solid #fff;
             z-index: 6;
         }
@@ -134,46 +130,51 @@
 
         .item-label {
             position: absolute;
-            bottom: 0;
-            width: 90%;
-            padding: 15px 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            bottom: 10px;
+            width: 100%;
+            left: 0;
             font-size: 14px;
             font-weight: 200;
             z-index: 5;
             letter-spacing: 3px;
+            text-align: center;
         }
 
-        /* 🚀 帥氣發光按鈕 */
-        .btn-group { margin-top: 50px; }
+        /* 按鈕樣式校準 */
+        .btn-group { margin-top: 50px; padding-bottom: 50px; }
         button {
             border-radius: 0px;
-            cursor: pointer; border: none; margin: 0 50px; transition: 0.3s;
+            cursor: pointer; border: none; 
+            margin: 10px 20px; /* 增加響應式間距 */
+            transition: 0.3s;
         }
         
         #printBtn { 
             background: #fff; color: #000;
-            font-size: 16px; font-weight: 400; padding: 10px 25px; letter-spacing: 2px;
-            box-shadow: 0 0 0px #fff;
-            position: relative;
+            font-size: 16px; font-weight: 400; padding: 12px 30px; letter-spacing: 2px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
         #printBtn:hover {
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
-            background: #f0f0f0;
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
         }
 
         #endBtn { 
-            background: #333; color: #fff; border: 0.5px solid #555;
-            font-size: 16px; font-weight: 400; padding: 10px 25px; letter-spacing: 2px;
+            background: transparent; color: #fff; border: 0.5px solid #555;
+            font-size: 16px; font-weight: 400; padding: 12px 30px; letter-spacing: 2px;
         }
-        #endBtn:hover { border-color: #fff; background: #444; }
+        #endBtn:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
 
-        /* 🖨️ 列印控制 */
+        /* 🖨️ 列印控制 (確保列印時不出錯) */
         @media print {
             body { background: white; color: black; padding: 0; }
             .no-print { display: none !important; }
             .grid { display: block; margin: 0; }
-            .item { border: none; padding: 0; margin-bottom: 20px; page-break-after: always; width: 100%; aspect-ratio: 9 / 16; -webkit-print-color-adjust: exact; }
+            .item { 
+                border: none; padding: 0; margin-bottom: 20px; 
+                page-break-after: always; width: 100%; 
+                aspect-ratio: 9 / 16; -webkit-print-color-adjust: exact; 
+            }
             .item::before, .item::after { display: none; }
             .checkbox, .item-label { display: none; }
             .photo, .frame-overlay { width: 100%; height: 100%; top: 0; left: 0; }
@@ -185,7 +186,7 @@
 <div class="no-print">
     <img id="post-bg" class="ig-page-bg" src="image/final-bg.png" alt="post background">
     <h1>MODEL1_請選擇想要列印的照片</h1>
-    <p><可多選或單選></p>
+    <p>&lt;可多選或單選&gt;</p>
 </div>
 
 <div class="grid">
@@ -225,15 +226,16 @@
 
 <script>
     window.onload = () => {
+        // 從 LocalStorage 讀取四張截圖
+        const score = localStorage.getItem("score_shot"); 
         const makeup = localStorage.getItem("makeup_shot");
         const text = localStorage.getItem("text_shot");
         const post = localStorage.getItem("post_shot");
-        const score = localStorage.getItem("score_shot"); 
 
+        if(score) document.getElementById('img-score').src = score;
         if(makeup) document.getElementById('img-makeup').src = makeup;
         if(text) document.getElementById('img-text').src = text;
         if(post) document.getElementById('img-post').src = post;
-        if(score) document.getElementById('img-score').src = score;
     };
 
     function toggle(el) {
@@ -247,6 +249,7 @@
             return;
         }
 
+        // 隱藏未選中的照片
         document.querySelectorAll('.item').forEach(item => {
             if (!item.classList.contains('selected')) {
                 item.style.display = 'none';
@@ -255,14 +258,17 @@
 
         window.print();
 
+        // 列印視窗關閉後恢復顯示
         setTimeout(() => {
             document.querySelectorAll('.item').forEach(item => item.style.display = 'flex');
         }, 1000);
     }
 
     function finish() {
-        localStorage.clear();
-        window.location.href = "index.html";
+        if(confirm("確定要結束體驗並清除所有照片嗎？")) {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
     }
 </script>
 
