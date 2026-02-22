@@ -27,52 +27,40 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 999;
-    overflow: hidden;
-    /* 新增以下三行，用 flex 取代 transform 置中 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    z-index: 1; /* 降到最底 */
+    overflow: hidden; /* ！！！這行最重要：切斷所有超出螢幕的背景 */
+    background: #000;
 }
 
   /* IG 背景圖 */
-  .ig-page-bg {
- 
-   position: fixed; 
-    inset: 0;                 /* ✅ 回到原本貼滿畫面的位置 */
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    transform: scale(1.5); 
+  /* 修改這部分 */
+.ig-page-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;  /* 改回 100% */
+  height: 100%; /* 改回 100% */
   
-    background-image: url("../image/text2.png");
-    background-size: cover;
-    background-position: center;
+  /* 用縮放來達成原本 200% 的感覺，這不會觸發滾動條偏移 */
+  transform: scale(1.5); 
   
-    opacity: 1;
-    z-index: 0;
-  
-    will-change: transform, opacity, filter;
-  
-    animation:
-      bg-move 3s ease-in-out infinite,
-      bg-opacity 2s steps(1) infinite,
-      bg-flicker 1.2s linear infinite;
-  }
-  
-  
-  
-  /* ===============================
-   背景左右來回移動
-=============================== */
+  z-index: 0;
+  opacity: 0.7;
+  object-fit: cover;
+  pointer-events: none;
+
+  /* 減少動畫負擔：移除 will-change，這在手機上很吃資源 */
+  animation:
+    bg-move 6s ease-in-out infinite, /* 減慢速度 */
+    bg-opacity 3s steps(1) infinite;
+}
+
+/* 簡化動畫，避免同時位移 X 與 Y */
 @keyframes bg-move {
-    0%   { transform: translateX(0) translateY(0); }
-    50%  { transform: translateX(6%) translateY(2%); }
-    100% { transform: translateX(0) translateY(0); }
-  }
-  
-  
+  0%   { transform: scale(1.5) translate(0, 0); }
+  50%  { transform: scale(1.5) translate(5%, 2%); }
+  100% { transform: scale(1.5) translate(0, 0); }
+}
   
   /* ===============================
      背景透明度起伏
@@ -109,25 +97,35 @@
     background-color: rgba(0, 0, 0, 0.7); /* 半透明黑 */
     z-index: 10;
 }
-  
+#viewport{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:1080px;
+  height:1920px;
+  transform:translate(-50%,-50%) scale(var(--scale-factor,1));
+  overflow:hidden;
+  background:#000;
+}
   /* ===============================
      IG Phone Frame
   ================================ */
  /* 修改此處：移除 transform */
-.ig-phone {
-  position: relative; /* 從 absolute 改為 relative，因為父層已經 flex 置中了 */
-  /* 移除 top: 50%, left: 50%, transform */
+ .ig-phone {
+  /* 確保手機框脫離背景的流向 */
+  position: fixed; 
+  top: 50%;
+  left: 50%;
+  /* 改回置中寫法，但在 JS 截圖時我們會做特別處理 */
+  transform: translate(-50%, -50%);
   
   width: 380px;
   height: 700px;
   background: #000;
   border-radius: 24px;
+  z-index: 100; /* 遠高於背景層 */
+  box-shadow: 0 0 40px rgba(0,0,0,1);
   overflow: hidden;
-  z-index: 20;
-  box-shadow: 0 0 40px rgba(0,0,0,0.8);
-  
-  /* 確保截圖時不會因為 margin 產生偏移 */
-  margin: 0; 
 }
 .phone-frame {
   position: absolute;
