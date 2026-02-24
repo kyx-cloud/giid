@@ -27,8 +27,11 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 1; /* 降到最底 */
-    overflow: hidden; /* ！！！這行最重要：切斷所有超出螢幕的背景 */
+    display: flex;         /* 使用 Flex */
+    justify-content: center; 
+    align-items: center;    
+    z-index: 999;
+    overflow: hidden;
     background: #000;
 }
 
@@ -97,35 +100,29 @@
     background-color: rgba(0, 0, 0, 0.7); /* 半透明黑 */
     z-index: 10;
 }
-#viewport{
-  position:absolute;
-  top:50%;
-  left:50%;
-  width:1080px;
-  height:1920px;
-  transform:translate(-50%,-50%) scale(var(--scale-factor,1));
-  overflow:hidden;
-  background:#000;
+#viewport {
+  position: relative;   
+  width: 380px;         
+  height: 700px;
+  background: #000;
+  overflow: hidden;
 }
   /* ===============================
      IG Phone Frame
   ================================ */
  /* 修改此處：移除 transform */
  .ig-phone {
-  /* 確保手機框脫離背景的流向 */
-  position: fixed; 
-  top: 50%;
-  left: 50%;
-  /* 改回置中寫法，但在 JS 截圖時我們會做特別處理 */
-  transform: translate(-50%, -50%);
-  
-  width: 380px;
-  height: 700px;
+  position: relative;    /* 不要用 fixed，讓它待在容器裡 */
+  width: 90%;           /* 填滿父容器 (380px) */
+  height: 90%;          /* 填滿父容器 (700px) */
   background: #000;
   border-radius: 24px;
-  z-index: 100; /* 遠高於背景層 */
+  z-index: 100;
   box-shadow: 0 0 40px rgba(0,0,0,1);
   overflow: hidden;
+  
+  /* ❌ 刪除以下這幾行，這是造成截圖偏移的主因 */
+  /* top: 50%; left: 50%; transform: translate(-50%, -50%); */
 }
 .phone-frame {
   position: absolute;
