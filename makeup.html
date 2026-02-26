@@ -30,18 +30,16 @@ html,body{
 }
 
 /* 🔹 第二攝影機（視訊通話感） */
-#video2{
-  position:absolute;
- 
-  
-  width:360px;
-  height:490px;
-  object-fit:cover;
-  
-
-  z-index:30;
-  background:#000;
-  transform: scaleX(-1); /* ✅ 第二鏡頭鏡像 */
+#video2 {
+  position: absolute;
+  top: 50px;    /* 調整位置 */
+  right: 50px;  /* 調整位置 */
+  width: 320px; /* C270 是 4:3 或 16:9，這邊可自行調整 */
+  height: 450px;
+  object-fit: cover;
+  z-index: 30;
+  border: 4px solid #fff;
+  transform: scaleX(-1); /* 鏡像 */
 }
 
 /* 9:16 scale */
@@ -484,13 +482,52 @@ const timer = setInterval(() => {
 ====================== */
 const video2 = document.getElementById("video2");
 
-navigator.mediaDevices.getUserMedia({ video: true })
-  .then(stream => {
-    video2.srcObject = stream;
-  })
-  .catch(err => {
-    console.error("第二攝影機失敗", err);
-  });
+/* -------------------------------
+   雙攝影機啟動邏輯
+-------------------------------- */
+async function startCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+    console.log("找到的攝影機：", videoDevices);
+
+    // 假設 videoDevices[0] 是主鏡頭，videoDevices[1] 是 C270
+    // 如果順序反了，請交換 [0] 與 [1]
+    const mainCameraId = videoDevices[0]?.deviceId;
+    const secondCameraId = videoDevices[1]?.deviceId || videoDevices[0]?.deviceId;
+
+    // 1. 啟動主攝影機 (用於 FaceMesh 偵測)
+    const stream1 = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        deviceId: mainCameraId ? { exact: mainCameraId } : undefined,
+        width: 1080, 
+        height: 1920 
+      }
+    });
+    video.srcObject = stream1;
+
+    // 2. 啟動第二攝影機 (C270)
+    const stream2 = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        deviceId: secondCameraId ? { exact: secondCameraId } : undefined,
+        width: 1280,
+        height: 720
+      }
+    });
+    video2.srcObject = stream2;
+
+  } catch (err) {
+    console.error("啟動攝影機失敗:", err);
+  }
+}
+
+// 執行啟動
+startCameras();
+
+// 注意：原本程式碼中的 cam.start() 可能會衝突，
+// 建議將原本的 const cam = new Camera(...) 部分保留，
+// 但確保上面的 stream1 已經正確賦值給 video。
 
   </script>
   
